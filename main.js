@@ -79,4 +79,113 @@ ipcMain.handle('workspace:choose', async () => {
 });
 
 ipcMain.handle('workspace:get', () => {
-  ret
+  return { root: WORKSPACE_ROOT };
+});
+
+// ---------- IPC: File system ----------
+
+ipcMain.handle('fs:readDir', async (_event, dirPath) => {
+  if (!WORKSPACE_ROOT) throw new Error('Workspace ยังไม่ได้ตั้งค่า');
+  if (!isPathAllowed(dirPath)) throw new Error('Access denied: outside workspace');
+
+  const items = fs.readdirSync(dirPath, { withFileTypes: true });
+  return items.map(i => ({
+    name: i.name,
+    isDir: i.isDirectory(),
+    fullPath: path.join(dirPath, i.name)
+  }));
+});
+
+ipcMain.handle('fs:readFile', async (_event, filePath) => {
+  if (!WORKSPACE_ROOT) throw new Error('Workspace ยังไม่ได้ตั้งค่า');
+  if (!isPathAllowed(filePath)) throw new Error('Access denied: outside workspace');
+
+  return fs.readFileSync(filePath, 'utf8');
+});
+
+ipcMain.handle('fs:writeFile', async (_event, { filePath, content }) => {
+  if (!WORKSPACE_ROOT) throw new Error('Workspace ยังไม่ได้ตั้งค่า');
+  if (!isPathAllowed(filePath)) throw new Error('Access denied: outside workspace');
+
+  fs.writeFileSync(filePath, content, 'utf8');
+  return true;
+});
+
+// ---------- IPC: Terminal / Commands ----------
+
+function isCommandDangerous(cmd) {
+  const lowered = cmd.toLowerCase();
+  if (lowered.includes('rm -rf /')) return true;
+  if (lowered.includes('rm -rf /*')) return true;
+  if (lowered.includes('format ')) return true;
+  return false;
+}
+
+ipcMain.handle('terminal:run', (event, { command, cwd }) => {
+  if (!WORKSPACE_ROOT) throw new Error('Workspace ยังไม่ได้ตั้งค่า');
+
+  const dirToUse = cwd ? path.resolve(cwd) : WORKSPACE_ROOT;
+  if (!isPathAllowed(dirToUse)) throw new Error('Cannot run outside workspace');
+
+  if (isCommandDangerous(command)) {
+    throw new Error('Command blocked by safety policy');
+  }
+
+  const child = spawn(command, {
+    shell: true,
+    cwd: dirToUse
+  });
+
+  child.stdout.on('data', data => {
+    event.sender.send('terminal:log', data.toString());
+  });
+
+  child.stderr.on('data', data => {
+    event.sender.send('terminal:log', data.toString());
+  });
+
+  child.on('close', code => {
+    event.sender.send('terminal:log', `\n[Process exited with code ${code}]\n`);
+  });
+
+  return true;
+});
+
+// ---------- IPC: AI Chat (OpenAI v0) ----------
+
+ipcMain.handle('ai:chat', async (_event, { providerId, apiKey, messages, options }) => {
+  if (providerId !== 'openai') {
+    throw new Error('ตอนนี้รองรับเฉพาะ OpenAI เท่านั้น');
+  }
+  if (!apiKey) {
+    throw new Error('ยังไม่ได้ใส่ API key');
+  }
+
+  const model = options?.model || 'gpt-4.1-mini';
+
+  try {
+    const res = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        model,
+        messages
+      })
+    });
+
+    const data = await res.json();
+    if (data.error) {
+      console.error('[OpenAI Error]', data.error);
+      throw new Error(data.error.message || 'OpenAI API error');
+    }
+
+    const content = data.choices?.[0]?.message?.content || '';
+    return content;
+  } catch (err) {
+    console.error('[ai:chat] error:', err);
+    throw err;
+  }
+});

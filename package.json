@@ -1,0 +1,15 @@
+{
+  "name": "phantom-dev-agent",
+  "version": "0.1.0",
+  "description": "PHANToM Dev Agent - AI-assisted local dev tool",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron ."
+  },
+  "author": "PHANToM",
+  "license": "MIT",
+  "dependencies": {
+    "electron": "^34.0.0",
+    "node-fetch": "^2.7.0"
+  }
+}

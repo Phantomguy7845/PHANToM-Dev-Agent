@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <title>PHANToM Dev Agent</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="app">
+  <!-- ซ้าย: Explorer -->
+  <aside class="sidebar">
+    <h2>Workspace</h2>
+    <div id="workspace-path" class="workspace-path"></div>
+    <button id="btn-change-workspace">เปลี่ยน workspace</button>
+    <ul id="file-tree"></ul>
+  </aside>
+
+  <!-- กลาง: Editor + Terminal -->
+  <main class="main">
+    <header class="main-header">
+      <span id="current-file">ไม่มีไฟล์ที่เปิดอยู่</span>
+      <button id="btn-save">บันทึกไฟล์</button>
+    </header>
+
+    <section class="editor-terminal">
+      <div class="editor-container">
+        <textarea id="editor" placeholder="// เลือกไฟล์จากซ้ายเพิ่อแก้ไขโค้ดที่นี่"></textarea>
+      </div>
+
+      <section class="terminal-panel">
+        <header class="panel-header">
+          <h2>Terminal</h2>
+        </header>
+        <pre id="terminal-log"></pre>
+        <form id="terminal-form" class="terminal-input">
+          <input id="terminal-command" placeholder="พิมพ์คำสั่งใน workspace นี้...">
+          <button type="submit">Run</button>
+        </form>
+      </section>
+    </section>
+  </main>
+
+  <!-- ขวา: AI Chat -->
+  <aside class="right-pane">
+    <section class="ai-panel">
+      <header class="panel-header">
+        <h2>PHANToM AI</h2>
+      </header>
+
+      <div id="ai-messages" class="ai-messages"></div>
+
+      <form id="ai-form" class="ai-input">
+        <select id="ai-provider">
+          <option value="openai">OpenAI GPT</option>
+        </select>
+        <input
+          id="ai-api-key"
+          type="password"
+          autocomplete="off"
+          placeholder="OpenAI API key (ไม่ถูกเก็บบนเซิร์ฟเวอร์)">
+        <textarea id="ai-prompt" rows="3" placeholder="พิมพ์ prompt เพื่อสั่ง AI..."></textarea>
+        <button type="submit">ส่งให้ AI</button>
+      </form>
+    </section>
+  </aside>
+</div>
+
+<script src="renderer.js"></script>
+</body>
+</html>
